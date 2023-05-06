@@ -44,9 +44,9 @@ class ImportController
 
         $resources = $this->getAvailableResourcesForImport($request);
 
-        $fields = $resources->mapWithKeys(function ($resource) use ($request) {
-            return $this->getAvailableFieldsForImport($resource, $request);
-        });
+        // $fields = $resources->mapWithKeys(function ($resource) use ($request) {
+        //     return $this->getAvailableFieldsForImport($resource, $request);
+        // });
 
         $resources = $resources->mapWithKeys(function ($resource) {
             return [
@@ -58,7 +58,7 @@ class ImportController
 
         return inertia(
             'CsvImport/Configure',
-            compact('file', 'file_name', 'resources', 'fields', 'rows', 'total_rows', 'headings', 'config', 'mods')
+            compact('file', 'file_name', 'resources', 'rows', 'total_rows', 'headings', 'config', 'mods')
         );
     }
 
@@ -138,7 +138,7 @@ class ImportController
         $resource_name = $config['resource'];
 
         $resource = Nova::resourceInstanceForKey($resource_name);
-        $rules = $this->extractValidationRules($resource, $request)->toArray();
+        // $rules = $this->extractValidationRules($resource, $request)->toArray();
         $model_class = $resource->resource::class;
 
         $import = $this->importer
@@ -150,13 +150,15 @@ class ImportController
         $this->importer
             ->setResource($resource)
             ->setAttributeMap($config['mappings'])
-            ->setRules($rules)
+            // ->setRules($rules)
+            ->setRules([])
             ->setModelClass($model_class)
             ->setMeta($config['meta'])
             ->setCustomValues($config['values'])
             ->setModifiers($config['modifiers'])
             ->import($path, $this->getDisk());
 
+            
         $failures = $this->importer->failures();
         $errors = $this->importer->errors();
 
@@ -193,31 +195,7 @@ class ImportController
         );
     }
 
-    protected function getAvailableFieldsForImport(string $resource, NovaRequest $request): array
-    {
-        $novaResource = new $resource(new $resource::$model);
-        $fieldsCollection = collect($novaResource->creationFields($request));
-
-        if (method_exists($novaResource, 'excludeAttributesFromImport')) {
-            $fieldsCollection = $fieldsCollection->filter(function (Field $field) use ($novaResource, $request) {
-                return ! in_array($field->attribute, $novaResource::excludeAttributesFromImport($request));
-            });
-        }
-
-        $fields = $fieldsCollection->map(function (Field $field) use ($novaResource, $request) {
-            return [
-                'name' => $field->name,
-                'attribute' => $field->attribute,
-                'rules' => $this->extractValidationRules($novaResource, $request)->get($field->attribute),
-            ];
-        });
-
-        // Note: ->values() is used here to avoid this array being turned into an object due to
-        // non-sequential keys (which might happen due to the filtering above.
-        return [
-            $novaResource->uriKey() => $fields->values(),
-        ];
-    }
+    
 
     protected function getAvailableResourcesForImport(NovaRequest $request): Collection
     {
@@ -248,27 +226,7 @@ class ImportController
         });
     }
 
-    protected function extractValidationRules(Resource $resource, NovaRequest $request): Collection
-    {
-        return collect($resource::rulesForCreation($request))->mapWithKeys(function ($rule, $key) {
-            foreach ($rule as $i => $r) {
-                if (! is_object($r)) {
-                    continue;
-                }
-
-                // Make sure relation checks start out with a clean query
-                if (is_a($r, Relatable::class)) {
-                    $rule[$i] = function () use ($r) {
-                        $r->query = $r->query->newQuery();
-
-                        return $r;
-                    };
-                }
-            }
-
-            return [$key => $rule];
-        });
-    }
+   
 
     protected function getConfigForFile(string $file): array
     {

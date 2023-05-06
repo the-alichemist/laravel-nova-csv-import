@@ -16,3 +16,5 @@ use Illuminate\Support\Facades\Route;
 Route::post('/upload', 'UploadController@handle');
 Route::post('/configure', 'ImportController@storeConfig');
 Route::post('/import', 'ImportController@import');
+
+Route::post('resources/{resource}/creation-fields', 'ResourceFieldsController@index')->name('csv_import.resource.creation_fields.index');
