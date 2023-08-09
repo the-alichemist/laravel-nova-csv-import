@@ -46,7 +46,10 @@ class UploadController
 
         $this->filesystem->putFileAs('csv-import', $file, $new_filename);
 
-        $this->formatTextFile($new_filename);
+        if ($file->extension() == 'txt') {
+            $this->formatTextFile($new_filename);
+        }
+
 
         // Capture some basic info
         // ! Note that original name and extension are user-editable, so could be tampered with
