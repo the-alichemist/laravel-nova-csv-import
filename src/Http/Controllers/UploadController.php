@@ -46,6 +46,8 @@ class UploadController
 
         $this->filesystem->putFileAs('csv-import', $file, $new_filename);
 
+        $this->formatTextFile($new_filename);
+
         // Capture some basic info
         // ! Note that original name and extension are user-editable, so could be tampered with
         // https://laravel.com/docs/9.x/filesystem#other-uploaded-file-information
@@ -60,5 +62,15 @@ class UploadController
         return response()->json([
             'configure' => "/csv-import/configure/{$new_filename}",
         ]);
+    }
+
+    private function formatTextFile(string $new_filename) {
+        $content = $this->filesystem->get('csv-import/'.$new_filename);
+        $lines = explode(PHP_EOL, $content);
+        $newContent = '';
+        foreach ($lines as $line) {
+            $newContent .= trim($line) . ",\n";
+        }
+        $this->filesystem->put('csv-import/' . $new_filename, $newContent);
     }
 }
